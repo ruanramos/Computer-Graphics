@@ -1,7 +1,14 @@
 #include <GL\freeglut.h>
 #include <iostream>
+#include <map>
 
 #define PI 3.14159265358979323846
+#define WINDOW_WIDTH 640
+#define WINDOW_HEIGHT 480
+#define WINDOW_X_POSITION 100
+#define WINDOW_Y_POSITION 100
+
+using namespace std;
 
 // STRUCTS DEFINITIONS
 
@@ -54,6 +61,10 @@ void DrawVector3D(tVector3D vector);
 
 // MATH FUNCTIONS WITH VECTORS SIGNATURES
 
+GLfloat mouseToWindowCoordinateX(GLfloat mx);
+
+GLfloat mouseToWindowCoordinateY(GLfloat yx);
+
 tVector3D SumVectors(tVector3D vector1, tVector3D vector2);
 
 double DotProduct3D(tVector3D vector1, tVector3D vector2);
@@ -85,7 +96,9 @@ tVector3D down = { 0,-1,0 };
 tVector3D left = { -1,0,0 };
 tVector3D right = { 1,0,0 };
 
-int clickCount = 0;
+int index = 0;
+GLfloat windowX[100];
+GLfloat windowY[100];
 
 
 // END OF GLOBAL VARIABLES
@@ -94,8 +107,8 @@ int main(int argc, char** argv) {
 	// glut initiation and window creation
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
-	glutInitWindowPosition(100, 100);
-	glutInitWindowSize(640, 480);
+	glutInitWindowPosition(WINDOW_X_POSITION, WINDOW_Y_POSITION);
+	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutCreateWindow("Simple Glut Application");
 
 	// Register Callbacks
@@ -108,17 +121,26 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
+// KEYBOARD AND MOUSE FUNCTIONS
+
 void Keyboard(unsigned char c, int x, int y) {
-	if (c == 'a') { // ou c == 27
+	if (c == 27) { // esc button = 27
 		exit(0);
 	}
 }
 
 void Mouse(int button, int state, int x, int y) {
-	if (button == GLUT_LEFT_BUTTON) {
-		exit(0);
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		GLfloat mx = GLfloat(x), my = GLfloat(y);
+		windowX[index] = mouseToWindowCoordinateX(mx);
+		windowY[index] = mouseToWindowCoordinateY(my);
+		printf("-------------\n\n %f %f %d\n\n-----------\n\n", windowX[index], windowY[index], index);
+		printf("DENTRO DO MOUSE\n\nx: %f, y: %f\n", mouseToWindowCoordinateX(mx), mouseToWindowCoordinateY(my));
+		index++;
 	}
 }
+
+// END OF KEYBOARD AND MOUSE FUNCTIONS
 
 // DRAWING FUNCTIONS
 
@@ -160,6 +182,16 @@ void DrawVector3D(tVector3D vector) {
 // END OF DRAWING FUNCTIONS
 
 // MATH FUNCTIONS FOR VECTORS
+
+// transform mouse coordinates to window coordinates
+GLfloat mouseToWindowCoordinateX(GLfloat mx) {
+	return (mx / (WINDOW_WIDTH / 2) - 1);
+
+}
+
+GLfloat mouseToWindowCoordinateY(GLfloat my) {
+	return (-((my / (WINDOW_HEIGHT / 2)) - 1));
+}
 
 // sum 2 vectors
 tVector3D SumVectors(tVector3D vector1, tVector3D vector2) {
@@ -301,7 +333,11 @@ void Render() {
 	tLineFunction2D func;
 	func.a = 2;
 	func.b = 1;
-	DrawLine3D(func);
 
+	glColor3f(0, 0, 0);
+	for (int i = 0; i < 100; i++) {
+		DrawVector3D({ windowX[i], windowY[i], 0 });
+	}
+	
 	glutSwapBuffers(); // envia o que desenhamos para a tela para que possa ser renderizado
 }
