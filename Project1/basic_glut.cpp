@@ -1,24 +1,3 @@
-/*
-
-Program by Ruan da Fonseca Ramos, student from Federal University of Rio de Janeiro
-Persuing computer science bachelor degree
-Made this project for graphic computer discipline
-
-
- USE glEnd(GL_) to start a drawing. Do not forget glEnd()
-
-GL_POINTS			Draws points on screen.Every vertex specified is a point.
-GL_LINES			Draws lines on screen.Every two vertices specified compose a line.
-GL_LINE_STRIP		Draws connected lines on screen.Every vertex specified after first two are connected.
-GL_LINE_LOOP		Draws connected lines on screen.The last vertex specified is connected to first vertex.
-GL_TRIANGLES		Draws triangles on screen.Every three vertices specified compose a triangle.
-GL_TRIANGLE_STRIP	Draws connected triangles on screen.Every vertex specified after first three vertices creates a triangle.
-GL_TRIANGLE_FAN		Draws connected triangles like GL_TRIANGLE_STRIP, except draws triangles in fan shape.
-GL_QUADS			Draws quadrilaterals(4 – sided shapes) on screen.Every four vertices specified compose a quadrilateral.
-GL_QUAD_STRIP		Draws connected quadrilaterals on screen.Every two vertices specified after first four compose a connected quadrilateral.
-GL_POLYGON			Draws a polygon on screen.Polygon can be composed of as many sides as you want.
-*/
-
 #include <GL\freeglut.h>
 #include <iostream>
 #include <map>
