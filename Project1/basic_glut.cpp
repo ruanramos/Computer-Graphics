@@ -17,6 +17,7 @@ GL_TRIANGLE_FAN		Draws connected triangles like GL_TRIANGLE_STRIP, except draws 
 GL_QUADS			Draws quadrilaterals(4 – sided shapes) on screen.Every four vertices specified compose a quadrilateral.
 GL_QUAD_STRIP		Draws connected quadrilaterals on screen.Every two vertices specified after first four compose a connected quadrilateral.
 GL_POLYGON			Draws a polygon on screen.Polygon can be composed of as many sides as you want.
+
 */
 
 #include <GL\freeglut.h>
@@ -71,12 +72,16 @@ void Mouse(int button, int state, int x, int y);
 
 // DRAWING FUNCTIONS SIGNATURES
 
+void drawAxis();
+
 void DrawVector3D(tVector3D vector);
 
 void DrawLine3D(tPoint a, tPoint b);
 void DrawLine3D(tLine2D line);
 
 void DrawVector3D(tVector3D vector);
+
+void DrawPolygon(int n);
 
 // END OF DRAWING FUNCTIONS SIGNATURES
 
@@ -148,6 +153,13 @@ void Keyboard(unsigned char c, int x, int y) {
 	if (c == 27) { // esc button = 27
 		exit(0);
 	}
+	if (c == 'c') { // c button clears the screen and reset index of points vector
+		glClearColor(1.0, 1.0, 1.0, 1.0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		drawAxis();
+		index = 0;
+		glutSwapBuffers();
+	}
 }
 
 void Mouse(int button, int state, int x, int y) {
@@ -155,8 +167,6 @@ void Mouse(int button, int state, int x, int y) {
 		GLfloat mx = GLfloat(x), my = GLfloat(y);
 		windowX[index] = mouseToWindowCoordinateX(mx);
 		windowY[index] = mouseToWindowCoordinateY(my);
-		printf("-------------\n\n %f %f %d\n\n-----------\n\n", windowX[index], windowY[index], index);
-		printf("DENTRO DO MOUSE\n\nx: %f, y: %f\n", mouseToWindowCoordinateX(mx), mouseToWindowCoordinateY(my));
 		index++;
 	}
 }
@@ -198,6 +208,14 @@ void DrawLine3D(tLineFunction2D func) {
 
 void DrawVector3D(tVector3D vector) {
 	DrawLine3D(origin, { vector.x, vector.y, vector.z });
+}
+
+void DrawPolygon(int n) {
+	glBegin(GL_LINE_LOOP);
+	for (int i = 0; i < n; i++) {
+		glVertex2f(windowX[i], windowY[i]);	
+	}
+	glEnd();
 }
 
 // END OF DRAWING FUNCTIONS
@@ -356,9 +374,10 @@ void Render() {
 	func.b = 1;
 
 	glColor3f(0, 0, 0);
-	for (int i = 0; i < 100; i++) {
-		DrawVector3D({ windowX[i], windowY[i], 0 });
+	if (index >= 5) {
+		DrawPolygon(5);
 	}
+	
 	
 	glutSwapBuffers(); // envia o que desenhamos para a tela para que possa ser renderizado
 }
