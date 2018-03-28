@@ -22,7 +22,8 @@ GL_POLYGON			Draws a polygon on screen.Polygon can be composed of as many sides 
 
 #include <GL\freeglut.h>
 #include <iostream>
-#include <map>
+#include <algorithm>
+#include <vector>
 
 #define PI 3.14159265358979323846
 #define WINDOW_WIDTH 640
@@ -45,7 +46,7 @@ typedef struct line {
 	tPoint p2;
 } tLine2D;
 
-typedef struct vector {
+typedef struct {
 	GLfloat x;
 	GLfloat y;
 	GLfloat z;
@@ -100,6 +101,8 @@ tVector3D CrossProduct(tVector3D vector1, tVector3D vector2);
 double Norm(tVector3D vector);
 
 bool LinesIntersect2D(tLine2D AB, tLine2D CD);
+tPoint LinesIntersect2D(tLineFunction2D func1, tLineFunction2D func2);
+bool LinesIntersect2DBool(tLineFunction2D func1, tLineFunction2D func2);
 
 bool IsOrthogonal3D(tVector3D vector1, tVector3D vector2);
 
@@ -112,6 +115,8 @@ tVector3D NormalizeVector(tVector3D vector);
 tLineFunction2D GetLineEquation2D(tPoint p1, tPoint p2);
 tLineFunction2D GetLineEquation2D(tLine2D line);
 
+bool PointInsidePolygon(tPoint point, int sidesPolygon);
+
 // END OF MATH FUNCTIONS WITH VECTORS SIGNATURES
 
 // GLOBAL VARIABLES
@@ -122,9 +127,7 @@ tVector3D down = { 0,-1,0 };
 tVector3D left = { -1,0,0 };
 tVector3D right = { 1,0,0 };
 
-int index = 0;
-GLfloat windowX[100];
-GLfloat windowY[100];
+vector<tPoint> mouseCoordinates;
 
 
 // END OF GLOBAL VARIABLES
@@ -157,7 +160,7 @@ void Keyboard(unsigned char c, int x, int y) {
 		glClearColor(1.0, 1.0, 1.0, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		drawAxis();
-		index = 0;
+		mouseCoordinates.clear();
 		glutSwapBuffers();
 	}
 }
@@ -165,9 +168,8 @@ void Keyboard(unsigned char c, int x, int y) {
 void Mouse(int button, int state, int x, int y) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
 		GLfloat mx = GLfloat(x), my = GLfloat(y);
-		windowX[index] = mouseToWindowCoordinateX(mx);
-		windowY[index] = mouseToWindowCoordinateY(my);
-		index++;
+		tPoint p = { mouseToWindowCoordinateX(mx), mouseToWindowCoordinateY(my) };
+		mouseCoordinates.push_back(p);
 	}
 }
 
@@ -206,6 +208,7 @@ void DrawLine3D(tLineFunction2D func) {
 	glEnd();
 }
 
+
 void DrawVector3D(tVector3D vector) {
 	DrawLine3D(origin, { vector.x, vector.y, vector.z });
 }
@@ -213,7 +216,7 @@ void DrawVector3D(tVector3D vector) {
 void DrawPolygon(int n) {
 	glBegin(GL_LINE_LOOP);
 	for (int i = 0; i < n; i++) {
-		glVertex2f(windowX[i], windowY[i]);	
+		glVertex2f(mouseCoordinates[i].x, mouseCoordinates[i].y);
 	}
 	glEnd();
 }
@@ -326,6 +329,24 @@ bool LinesIntersect2D(tLine2D AB, tLine2D CD) {
 	return (DotProduct3D(CrossProduct(ab, ac), CrossProduct(ab, ad)) < 0 && DotProduct3D(CrossProduct(cd, ca), CrossProduct(cd, cb)) < 0);
 }
 
+// check if 2 lines intercept given their equations and return the point
+tPoint LinesIntersect2D(tLineFunction2D func1, tLineFunction2D func2) {
+	tPoint p;
+	p.x = GLfloat((func2.b - func1.b)) / GLfloat(func1.a - func2.a);
+	p.y = GLfloat(func1.a) * GLfloat(p.x) + GLfloat(func1.b);
+	p.z = 0;
+	return p;
+}
+// check if 2 lines intercept given their equations and return true or false
+bool LinesIntersect2DBool(tLineFunction2D func1, tLineFunction2D func2) {
+	tPoint p;
+	p.x = GLfloat((func2.b - func1.b)) / GLfloat(func1.a - func2.a);
+	p.y = GLfloat(func1.a) * GLfloat(p.x) + GLfloat(func1.b);
+	p.z = 0;
+	if (p.x != NULL) return true;
+	else return false;
+}
+
 // gets a line equation given 2 points
 tLineFunction2D GetLineEquation2D(tPoint p1, tPoint p2) {
 	double a, b;
@@ -352,6 +373,37 @@ tLineFunction2D GetLineEquation2D(tLine2D line) {
 	return func;
 }
 
+bool PointInsidePolygon(tPoint point, int sidesPolygon) {	
+	int counter = 0;
+	tLine2D l1 = { point, { 2, 2, 0 } };
+	tLineFunction2D l1Func = GetLineEquation2D(l1);
+	tLine2D l2;
+	for (int i = 0; i < sidesPolygon; i++) {
+		tPoint a, b;
+		a = mouseCoordinates[i];
+		b = mouseCoordinates[(i + 1) % sidesPolygon];
+		l2 = { a, b };
+		tLineFunction2D l2Func = GetLineEquation2D(l2);
+		glColor3f(1, 0, 0);
+		DrawLine3D(l1);
+		glColor3f(0, 1, 0);
+		DrawLine3D(l2);
+		tPoint intersection = LinesIntersect2D(l1Func, l2Func);
+
+		if (point.x < intersection.x && min(a.x,b.x) < intersection.x && intersection.x < max(a.x,b.x) && min(a.y, b.y) < intersection.y && intersection.y < max(a.y, b.y)) {
+			glPointSize(15);
+			glColor3f(0, 0, 0);
+			glBegin(GL_POINTS);
+			glVertex2f(intersection.x, intersection.y);
+			glEnd();
+			counter++;
+		}
+	}
+	printf("counter = %d\n", counter);
+	if (counter % 2 != 0) return true;
+	else return false;
+}
+
 // END OF MATH FUNCTIONS FOR VECTORS
 
 void Render() {
@@ -373,11 +425,19 @@ void Render() {
 	func.a = 2;
 	func.b = 1;
 
+	int n = 4; // polygon sides you want to draw
 	glColor3f(0, 0, 0);
-	if (index >= 5) {
-		DrawPolygon(5);
-	}
 	
-	
+	if (mouseCoordinates.size() >= n) {
+		DrawPolygon(n);
+		if (mouseCoordinates.size() >= n+ 1) {
+			tLine2D line = { mouseCoordinates[n], {2, 2, 0} };
+			tLineFunction2D lineFunc = GetLineEquation2D(line);
+			DrawLine3D(line);
+			if (PointInsidePolygon(mouseCoordinates[n], n)) printf("INSIDE\n");
+			else printf("OUTSIDE\n");
+		}
+		
+	}	
 	glutSwapBuffers(); // envia o que desenhamos para a tela para que possa ser renderizado
 }
