@@ -31,17 +31,22 @@ GL_POLYGON			Draws a polygon on screen.Polygon can be composed of as many sides 
 #define WINDOW_X_POSITION 100
 #define WINDOW_Y_POSITION 100
 
+#define RED 1
+#define GREEN 2
+#define BLUE 3
+#define ORANGE 4
+
 using namespace std;
 
 // STRUCTS DEFINITIONS
 
-typedef struct point {
+typedef struct {
 	GLfloat x;
 	GLfloat y;
 	GLfloat z;
 } tPoint;
 
-typedef struct line {
+typedef struct {
 	tPoint p1;
 	tPoint p2;
 } tLine2D;
@@ -52,16 +57,20 @@ typedef struct {
 	GLfloat z;
 } tVector3D;
 
-typedef struct lineFunction {
+typedef struct {
 	double a;
 	double b;
 } tLineFunction2D;
 
-typedef struct color {
+typedef struct {
 	GLfloat red;
 	GLfloat green;
 	GLfloat blue;
 } colorRGB;
+
+typedef struct {
+	vector<tLine2D> sides;
+} tPolygon;
 
 // END OF STRUCTS DEFINITIONS
 
@@ -70,6 +79,14 @@ void Render(void);
 void Keyboard(unsigned char c, int x, int y);
 
 void Mouse(int button, int state, int x, int y);
+
+// START OF MENU FUNCTIONS
+
+void CreateGLUTMenus();
+
+void ProcessMenuEvents(int option);
+
+// END OF MENU FUNCTIONS
 
 // DRAWING FUNCTIONS SIGNATURES
 
@@ -82,11 +99,13 @@ void DrawLine3D(tLine2D line);
 
 void DrawVector3D(tVector3D vector);
 
-void DrawPolygon(int n);
+void DrawPolygon(tPolygon polygon);
 
 // END OF DRAWING FUNCTIONS SIGNATURES
 
 // MATH FUNCTIONS WITH VECTORS SIGNATURES
+
+tPolygon InstantiatePolygon(int n);
 
 GLfloat mouseToWindowCoordinateX(GLfloat mx);
 
@@ -115,7 +134,7 @@ tVector3D NormalizeVector(tVector3D vector);
 tLineFunction2D GetLineEquation2D(tPoint p1, tPoint p2);
 tLineFunction2D GetLineEquation2D(tLine2D line);
 
-bool PointInsidePolygon(tPoint point, int sidesPolygon);
+bool PointInsidePolygon(tPoint point, tPolygon polygon);
 
 // END OF MATH FUNCTIONS WITH VECTORS SIGNATURES
 
@@ -144,6 +163,8 @@ int main(int argc, char** argv) {
 	glutDisplayFunc(Render); // displayFunc me diz qual a função que vai ser usada para desenhar na tela
 	glutKeyboardFunc(Keyboard);
 	glutMouseFunc(Mouse);
+	
+	CreateGLUTMenus();
 
 	// call the main loop
 	glutMainLoop(); // isso quer dizer que terminei a inicialização e posso começar a renderizar
@@ -170,6 +191,38 @@ void Mouse(int button, int state, int x, int y) {
 		GLfloat mx = GLfloat(x), my = GLfloat(y);
 		tPoint p = { mouseToWindowCoordinateX(mx), mouseToWindowCoordinateY(my) };
 		mouseCoordinates.push_back(p);
+	}
+}
+
+
+// This function creates a menu on the screen when we right click
+void CreateGLUTMenus() {
+	int menu;
+	
+	// create the menu and tell glut that "ProcessMenuEvents" will handle the events
+	menu = glutCreateMenu(ProcessMenuEvents);
+
+	// add entries to menu
+	glutAddMenuEntry("Clear Screen", 1);
+	glutAddMenuEntry("End Program", 2);
+
+
+	// attach the menu to the right button
+	glutAttachMenu(GLUT_RIGHT_BUTTON);
+}
+
+// functions that process the menu options
+void ProcessMenuEvents(int option) {
+	switch (option) {
+		case 1:
+			glClearColor(1.0, 1.0, 1.0, 1.0);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			drawAxis();
+			mouseCoordinates.clear();
+			glutSwapBuffers();
+			break;
+		case 2:
+			exit(0);
 	}
 }
 
@@ -213,9 +266,10 @@ void DrawVector3D(tVector3D vector) {
 	DrawLine3D(origin, { vector.x, vector.y, vector.z });
 }
 
-void DrawPolygon(int n) {
+// Draws the polygon given on the screen
+void DrawPolygon(tPolygon polygon) {
 	glBegin(GL_LINE_LOOP);
-	for (int i = 0; i < n; i++) {
+	for (int i = 0; i < polygon.sides.size(); i++) {
 		glVertex2f(mouseCoordinates[i].x, mouseCoordinates[i].y);
 	}
 	glEnd();
@@ -224,6 +278,19 @@ void DrawPolygon(int n) {
 // END OF DRAWING FUNCTIONS
 
 // MATH FUNCTIONS FOR VECTORS
+
+// Instantiate a polygon given the number of sides on a variable of type tPolygon 
+tPolygon InstantiatePolygon(int n) {
+	tPolygon p;
+	tLine2D line;
+	for (int i = 0; i < n; i++) {
+		line.p1 = mouseCoordinates[i];
+		line.p2 = mouseCoordinates[(i + 1) % n];
+		glVertex2f(mouseCoordinates[i].x, mouseCoordinates[i].y);
+		p.sides.push_back(line);
+	}
+	return p;
+}
 
 // transform mouse coordinates to window coordinates
 GLfloat mouseToWindowCoordinateX(GLfloat mx) {
@@ -373,29 +440,21 @@ tLineFunction2D GetLineEquation2D(tLine2D line) {
 	return func;
 }
 
-bool PointInsidePolygon(tPoint point, int sidesPolygon) {	
+// checks if a given point is inside a polygon or not
+bool PointInsidePolygon(tPoint point, tPolygon polygon) {	
 	int counter = 0;
 	tLine2D l1 = { point, { 2, 2, 0 } };
 	tLineFunction2D l1Func = GetLineEquation2D(l1);
 	tLine2D l2;
-	for (int i = 0; i < sidesPolygon; i++) {
+	for (int i = 0; i < polygon.sides.size(); i++) {
 		tPoint a, b;
 		a = mouseCoordinates[i];
-		b = mouseCoordinates[(i + 1) % sidesPolygon];
+		b = mouseCoordinates[(i + 1) % polygon.sides.size()];
 		l2 = { a, b };
 		tLineFunction2D l2Func = GetLineEquation2D(l2);
-		glColor3f(1, 0, 0);
-		DrawLine3D(l1);
-		glColor3f(0, 1, 0);
-		DrawLine3D(l2);
 		tPoint intersection = LinesIntersect2D(l1Func, l2Func);
 
 		if (point.x < intersection.x && min(a.x,b.x) < intersection.x && intersection.x < max(a.x,b.x) && min(a.y, b.y) < intersection.y && intersection.y < max(a.y, b.y)) {
-			glPointSize(15);
-			glColor3f(0, 0, 0);
-			glBegin(GL_POINTS);
-			glVertex2f(intersection.x, intersection.y);
-			glEnd();
 			counter++;
 		}
 	}
@@ -407,37 +466,43 @@ bool PointInsidePolygon(tPoint point, int sidesPolygon) {
 // END OF MATH FUNCTIONS FOR VECTORS
 
 void Render() {
-	// limpa o que tava na tela anteriormente.
+	// clear what was on the screen before
 	glClearColor(1.0, 1.0, 1.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	// Sempre que dou um begin dou um end. Dentro posso dar os vértices na forma glVertex234idf
+	// Every time I use glBegin I use also glEnd. I can give the vertexes like glVertex234idf
 
 	glColor3f(0, 0, 0);
 	drawAxis();
 
-	tVector3D v1 = {1,0,0};
-	tVector3D v2 = { 0,1,0 };
-
-	tLine2D l1 = { {GLfloat(0.3), GLfloat(-0.1), GLfloat(0)}, { GLfloat(0.2), GLfloat(0.2), GLfloat(0)} };
-	tLine2D l2 = { { GLfloat(0.1), GLfloat(0), GLfloat(0) },{ GLfloat(-0.4), GLfloat(0), GLfloat(0) } };
-
-	tLineFunction2D func;
-	func.a = 2;
-	func.b = 1;
-
-	int n = 4; // polygon sides you want to draw
+	int n = 6; // polygon sides you want to draw
 	glColor3f(0, 0, 0);
-	
+	tPolygon polygon;
+
 	if (mouseCoordinates.size() >= n) {
-		DrawPolygon(n);
-		if (mouseCoordinates.size() >= n+ 1) {
-			tLine2D line = { mouseCoordinates[n], {2, 2, 0} };
-			tLineFunction2D lineFunc = GetLineEquation2D(line);
-			DrawLine3D(line);
-			if (PointInsidePolygon(mouseCoordinates[n], n)) printf("INSIDE\n");
-			else printf("OUTSIDE\n");
+		polygon = InstantiatePolygon(n);
+		for (int i = 0; i < polygon.sides.size(); i++) {
+			printf("lado %d: (%f %f) --> (%f %f)\n", i, polygon.sides[i].p1.x, polygon.sides[i].p1.y, polygon.sides[i].p2.x, polygon.sides[i].p2.y);
 		}
-		
+		DrawPolygon(polygon);
+		if (mouseCoordinates.size() >= n+ 1) {
+			if (PointInsidePolygon(mouseCoordinates[n], polygon)) {
+				glColor3f(0, 1, 0);
+				glPointSize(8);
+				glBegin(GL_POINTS);
+				glVertex3f(mouseCoordinates[n].x, mouseCoordinates[n].y, mouseCoordinates[n].z);
+				glEnd();
+				printf("INSIDE\n");
+			}
+			else {
+				printf("OUTSIDE\n");
+				glColor3f(1, 0, 0);
+				glPointSize(8);
+				glBegin(GL_POINTS);
+				glVertex3f(mouseCoordinates[n].x, mouseCoordinates[n].y, mouseCoordinates[n].z);
+				glEnd();
+			}
+		}
+		glColor3f(0, 0, 0);
 	}	
 	glutSwapBuffers(); // envia o que desenhamos para a tela para que possa ser renderizado
 }
